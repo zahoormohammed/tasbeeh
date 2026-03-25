@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Tasbeeh Counter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a1a12;
+    --surface: #0f2318;
+    --card: #142b1e;
+    --border: rgba(52,211,153,0.12);
+    --border-hover: rgba(52,211,153,0.28);
+    --green: #059669;
+    --green-light: #34d399;
+    --green-dim: rgba(5,150,105,0.15);
+    --text: #ecfdf5;
+    --text-muted: #6ee7b7;
+    --text-dim: #4b8a6e;
+    --danger: #ef4444;
+    --danger-dim: rgba(239,68,68,0.1);
+    --amber: #f59e0b;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 {
+    font-family: 'Amiri', serif;
+    font-size: 22px;
+    color: var(--green-light);
+    letter-spacing: 0.3px;
+  }
+  .header-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+  .btn-add-header {
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s;
+  }
+  .btn-add-header:hover { background: #047857; }
+
+  /* Main */
+  .main { padding: 20px; max-width: 480px; margin: 0 auto; }
+
+  /* Active counter */
+  .active-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 28px 24px 24px;
+    margin-bottom: 24px;
+    text-align: center;
+    display: none;
+  }
+  .active-panel.visible { display: block; }
+
+  .active-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .active-arabic {
+    font-family: 'Amiri', serif;
+    font-size: 28px;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.4;
+    direction: rtl;
+  }
+  .active-note {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+    font-style: italic;
+  }
+
+  /* Counter ring */
+  .counter-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .counter-svg { transform: rotate(-90deg); }
+  .ring-bg { stroke: rgba(52,211,153,0.08); }
+  .ring-progress {
+    stroke: var(--green-light);
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .ring-complete { stroke: #34d399; filter: drop-shadow(0 0 6px rgba(52,211,153,0.6)); }
+  .counter-inner {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .counter-num {
+    font-size: 56px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .counter-num.pop { transform: scale(1.15); }
+  .counter-target {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .complete-badge {
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(52,211,153,0.15);
+    color: var(--green-light);
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-top: 6px;
+    display: none;
+  }
+  .complete-badge.show { display: block; }
+
+  /* Tap button */
+  .tap-btn {
+    width: 100%;
+    padding: 18px;
+    border-radius: var(--radius);
+    border: none;
+    background: linear-gradient(135deg, var(--green), #047857);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: transform 0.08s, background 0.15s;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(5,150,105,0.3);
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .tap-btn:active { transform: scale(0.97); background: #047857; }
+  .tap-btn-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    transform: scale(0);
+    animation: ripple 0.5s linear;
+    pointer-events: none;
+  }
+  @keyframes ripple {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* Action row */
+  .action-row {
+    display: flex;
+    gap: 10px;
+  }
+  .btn-reset, .btn-deselect {
+    flex: 1;
+    padding: 11px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-reset { color: var(--amber); border-color: rgba(245,158,11,0.25); }
+  .btn-reset:hover { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.45); }
+  .btn-deselect { color: var(--text-dim); }
+  .btn-deselect:hover { background: var(--green-dim); color: var(--text-muted); }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+    display: none;
+  }
+  .empty.visible { display: block; }
+  .empty-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+  .empty h3 {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .empty p { font-size: 13px; line-height: 1.6; }
+
+  /* Section label */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Tasbeeh list */
+  .list { display: flex; flex-direction: column; gap: 10px; }
+
+  .item-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .item-card:hover { border-color: var(--border-hover); }
+  .item-card.active {
+    border-color: var(--green);
+    box-shadow: 0 0 0 1px var(--green), 0 4px 16px rgba(5,150,105,0.15);
+  }
+  .item-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--item-color, var(--green));
+    border-radius: 2px 0 0 2px;
+  }
+
+  .item-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .item-info { flex: 1; min-width: 0; }
+  .item-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .item-arabic {
+    font-family: 'Amiri', serif;
+    font-size: 16px;
+    color: var(--text-muted);
+    direction: rtl;
+    line-height: 1.2;
+  }
+  .item-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+  }
+  .item-count {
+    font-size: 26px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--item-color, var(--green-light));
+    flex-shrink: 0;
+  }
+  .item-count.complete { color: var(--green-light); }
+
+  /* Progress bar */
+  .prog-wrap {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .prog-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(52,211,153,0.08);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--item-color, var(--green));
+    transition: width 0.5s ease;
+  }
+  .prog-fill.done { background: var(--green-light); }
+  .prog-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    min-width: 38px;
+    text-align: right;
+  }
+
+  /* Item actions */
+  .item-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .act-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-dim);
+  }
+  .act-btn:hover { background: var(--green-dim); color: var(--text-muted); }
+  .act-btn.danger:hover { background: var(--danger-dim); color: var(--danger); }
+  .act-btn svg { flex-shrink: 0; }
+  .spacer { flex: 1; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    padding: 0 0 max(24px, env(safe-area-inset-bottom)) 0;
+    width: 100%;
+    max-width: 480px;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-handle {
+    display: flex; justify-content: center; padding: 14px 0 4px;
+  }
+  .modal-handle div {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 24px 20px;
+  }
+  .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .btn-close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim);
+    font-size: 18px;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+  .btn-close:hover { background: var(--green-dim); color: var(--text-muted); }
+
+  .modal-body { padding: 0 24px 0; }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+  .field input {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: var(--green); }
+  .field input[dir="rtl"] { font-family: 'Amiri', serif; font-size: 18px; }
+  .field input::placeholder { color: var(--text-dim); }
+
+  /* Color picker */
+  .color-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .color-swatch {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.selected {
+    border-color: var(--bg);
+    outline: 2px solid currentColor;
+    transform: scale(1.15);
+  }
+
+  .btn-submit {
+    width: 100%;
+    padding: 16px;
+    border-radius: var(--radius);
+    border: none;
+    background: var(--green);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    transition: background 0.15s, transform 0.08s;
+  }
+  .btn-submit:hover { background: #047857; }
+  .btn-submit:active { transform: scale(0.98); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 999;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Completed overlay on ring */
+  .ring-glow {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s;
+    box-shadow: inset 0 0 30px rgba(52,211,153,0.12);
+  }
+  .ring-glow.show { opacity: 1; }
+
+  @media (max-width: 360px) {
+    .main { padding: 14px; }
+    .counter-num { font-size: 44px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>&#x062A;&#x0633;&#x0628;&#x064A;&#x062D; Tasbeeh</h1>
+    <div class="header-sub">Digital Dhikr Counter</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button id="vibBtn" onclick="toggleVibration()" title="Toggle vibration" style="background:var(--green-dim);border:1px solid var(--border);border-radius:8px;padding:7px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;font-family:Inter,sans-serif;color:var(--text-muted);transition:all 0.15s">
+      <svg id="vibIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9v6M6 5v14M22 9v6M18 5v14M10 3v18M14 3v18"/></svg>
+      <span id="vibLabel">Vibration On</span>
+    </button>
+    <button class="btn-add-header" onclick="openModal()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Add New
+    </button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Active counter panel -->
+  <div class="active-panel" id="activePanel">
+    <div class="active-title" id="activeTitle">SubhanAllah</div>
+    <div class="active-arabic" id="activeArabic"></div>
+    <div class="active-note" id="activeNote"></div>
+
+    <div class="counter-wrap">
+      <svg class="counter-svg" id="counterSvg" width="200" height="200">
+        <circle class="ring-bg" cx="100" cy="100" r="82" fill="none" stroke-width="6"/>
+        <circle class="ring-progress" id="ringProgress" cx="100" cy="100" r="82" fill="none" stroke-width="6"
+          stroke-dasharray="515" stroke-dashoffset="515"/>
+      </svg>
+      <div class="ring-glow" id="ringGlow"></div>
+      <div class="counter-inner">
+        <div class="counter-num" id="counterNum">0</div>
+        <div class="counter-target" id="counterTarget"></div>
+        <div class="complete-badge" id="completeBadge">&#10003; Complete!</div>
+      </div>
+    </div>
+
+    <button class="tap-btn" id="tapBtn" onclick="doIncrement(event)">
+      Tap to Count &nbsp;&#x2022;
+    </button>
+
+    <div class="action-row">
+      <button class="btn-reset" onclick="doReset()">&#10227; Reset</button>
+      <button class="btn-deselect" onclick="deselect()">&#8592; Back to List</button>
+    </div>
+  </div>
+
+  <!-- List section -->
+  <div class="section-label" id="listLabel" style="display:none">Your Tasbeeh</div>
+  <div class="empty" id="emptyState">
+    <div class="empty-icon">&#9790;</div>
+    <h3>No Tasbeeh Added Yet</h3>
+    <p>Tap "Add New" to create your<br>first dhikr counter.</p>
+  </div>
+  <div class="list" id="itemList"></div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"><div></div></div>
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add New Tasbeeh</div>
+      <button class="btn-close" onclick="closeModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId"/>
+      <div class="field">
+        <label>Title *</label>
+        <input type="text" id="fTitle" placeholder="e.g. SubhanAllah" maxlength="60"/>
+      </div>
+      <div class="field">
+        <label>Arabic Text</label>
+        <input type="text" id="fArabic" dir="rtl" placeholder="سُبْحَانَ اللَّهِ" maxlength="80"/>
+      </div>
+      <div class="field">
+        <label>Note / Meaning</label>
+        <input type="text" id="fNote" placeholder="e.g. Glory be to Allah" maxlength="100"/>
+      </div>
+      <div class="field">
+        <label>Target Count</label>
+        <input type="number" id="fTarget" placeholder="e.g. 33, 100 (optional)" min="1" max="9999"/>
+      </div>
+      <div class="field">
+        <label>Color</label>
+        <div class="color-grid" id="colorGrid"></div>
+      </div>
+      <button class="btn-submit" id="submitBtn" onclick="handleSubmit()">Add Tasbeeh</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const COLORS = ['#059669','#0891b2','#7c3aed','#b45309','#dc2626','#db2777','#0284c7','#65a30d','#9333ea','#d97706'];
+const CIRCUMFERENCE = 2 * Math.PI * 82;
+
+let items = JSON.parse(localStorage.getItem('tasbeeh_items') || '[]');
+let activeId = null;
+let editingId = null;
+let selectedColor = COLORS[0];
+
+// Seed defaults if empty
+if (items.length === 0) {
+  const now = Date.now();
+  items = [
+    { id: now+1, title: 'SubhanAllah', arabic: 'سُبْحَانَ ٱللَّهِ', note: 'Glory be to Allah', count: 0, target: 33, color: '#059669' },
+    { id: now+2, title: 'Alhamdulillah', arabic: 'ٱلْحَمْدُ لِلَّهِ', note: 'All praise is due to Allah', count: 0, target: 33, color: '#0891b2' },
+    { id: now+3, title: 'Allahu Akbar', arabic: 'ٱللَّهُ أَكْبَرُ', note: 'Allah is the Greatest', count: 0, target: 34, color: '#7c3aed' },
+    { id: now+4, title: 'Astaghfirullah', arabic: 'أَسْتَغْفِرُ ٱللَّهَ', note: 'I seek forgiveness from Allah', count: 0, target: 100, color: '#b45309' },
+  ];
+  save();
+}
+
+function save() {
+  localStorage.setItem('tasbeeh_items', JSON.stringify(items));
+}
+
+function getById(id) {
+  return items.find(i => i.id === id);
+}
+
+// ── Render list ───────────────────────────────────────────────────────────────
+
+function render() {
+  const list = document.getElementById('itemList');
+  const empty = document.getElementById('emptyState');
+  const label = document.getElementById('listLabel');
+
+  if (items.length === 0) {
+    list.innerHTML = '';
+    empty.classList.add('visible');
+    label.style.display = 'none';
+    return;
+  }
+
+  empty.classList.remove('visible');
+  label.style.display = 'block';
+
+  list.innerHTML = items.map(item => {
+    const pct = item.target ? Math.min((item.count / item.target) * 100, 100) : 0;
+    const done = item.target && item.count >= item.target;
+    const isActive = item.id === activeId;
+
+    return `
+      <div class="item-card ${isActive ? 'active' : ''}" 
+           style="--item-color:${item.color}"
+           onclick="selectItem(${item.id})">
+        <div class="item-top">
+          <div class="item-info">
+            <div class="item-title">
+              ${escHtml(item.title)}
+              ${done ? `<span style="font-size:10px;background:rgba(52,211,153,0.12);color:#34d399;padding:2px 8px;border-radius:20px;font-weight:500">✓ Done</span>` : ''}
+            </div>
+            ${item.arabic ? `<div class="item-arabic">${escHtml(item.arabic)}</div>` : ''}
+            ${item.note ? `<div class="item-note">${escHtml(item.note)}</div>` : ''}
+          </div>
+          <div class="item-count ${done ? 'complete' : ''}" style="color:${item.color}">
+            ${item.count.toLocaleString()}
+          </div>
+        </div>
+
+        ${item.target ? `
+        <div class="prog-wrap">
+          <div class="prog-bar">
+            <div class="prog-fill ${done ? 'done' : ''}" style="width:${pct}%;background:${item.color}"></div>
+          </div>
+          <div class="prog-label">${item.count}/${item.target}</div>
+        </div>` : ''}
+
+        <div class="item-actions" onclick="event.stopPropagation()">
+          <button class="act-btn" onclick="selectItem(${item.id})">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 0a6 6 0 100 12A6 6 0 006 0zm.75 6.75h-1.5v-3h1.5v3zm0-4.5h-1.5v-1.5h1.5v1.5z"/></svg>
+            Count
+          </button>
+          <button class="act-btn" onclick="quickReset(${item.id})">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 4s1-3 5-3a5 5 0 015 5 5 5 0 01-5 5c-2.5 0-4-1.5-4-1.5"/><path d="M1 1v3h3"/></svg>
+            Reset
+          </button>
+          <div class="spacer"></div>
+          <button class="act-btn" onclick="openEditModal(${item.id})">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z"/></svg>
+            Edit
+          </button>
+          <button class="act-btn danger" onclick="deleteItem(${item.id})">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 3h9M4 3V1.5h4V3M5 5.5v4M7 5.5v4M2.5 3l.5 7.5h6L10 3"/></svg>
+            Delete
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Active panel ──────────────────────────────────────────────────────────────
+
+function selectItem(id) {
+  activeId = id;
+  const item = getById(id);
+  if (!item) return;
+  updateActivePanel(item);
+  document.getElementById('activePanel').classList.add('visible');
+  document.getElementById('activePanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  render();
+}
+
+function updateActivePanel(item) {
+  document.getElementById('activeTitle').textContent = item.title;
+  document.getElementById('activeArabic').textContent = item.arabic || '';
+  document.getElementById('activeNote').textContent = item.note || '';
+
+  const tapBtn = document.getElementById('tapBtn');
+  tapBtn.style.background = `linear-gradient(135deg, ${item.color}, ${shadeColor(item.color, -20)})`;
+  tapBtn.style.boxShadow = `0 4px 20px ${item.color}44`;
+
+  document.getElementById('ringProgress').style.stroke = item.color;
+  updateRing(item);
+}
+
+function updateRing(item) {
+  const num = document.getElementById('counterNum');
+  const target = document.getElementById('counterTarget');
+  const ring = document.getElementById('ringProgress');
+  const badge = document.getElementById('completeBadge');
+  const glow = document.getElementById('ringGlow');
+
+  num.textContent = item.count.toLocaleString();
+
+  if (item.target) {
+    const pct = Math.min(item.count / item.target, 1);
+    const offset = CIRCUMFERENCE * (1 - pct);
+    ring.style.strokeDashoffset = offset;
+    target.textContent = '/ ' + item.target;
+
+    const done = item.count >= item.target;
+    badge.classList.toggle('show', done);
+    glow.classList.toggle('show', done);
+    ring.classList.toggle('ring-complete', done);
+  } else {
+    ring.style.strokeDashoffset = CIRCUMFERENCE;
+    target.textContent = '';
+    badge.classList.remove('show');
+    glow.classList.remove('show');
+  }
+}
+
+function deselect() {
+  activeId = null;
+  document.getElementById('activePanel').classList.remove('visible');
+  render();
+}
+
+// ── Counter actions ───────────────────────────────────────────────────────────
+
+let vibrationOn = localStorage.getItem('tasbeeh_vibration') !== 'off';
+
+function toggleVibration() {
+  vibrationOn = !vibrationOn;
+  localStorage.setItem('tasbeeh_vibration', vibrationOn ? 'on' : 'off');
+  updateVibBtn();
+  if (vibrationOn && navigator.vibrate) navigator.vibrate(30);
+  showToast(vibrationOn ? 'Vibration on' : 'Vibration off');
+}
+
+function updateVibBtn() {
+  const btn = document.getElementById('vibBtn');
+  const label = document.getElementById('vibLabel');
+  const icon = document.getElementById('vibIcon');
+  if (vibrationOn) {
+    btn.style.background = 'var(--green-dim)';
+    btn.style.color = 'var(--text-muted)';
+    btn.style.borderColor = 'var(--border)';
+    label.textContent = 'Vibration On';
+    icon.style.opacity = '1';
+  } else {
+    btn.style.background = 'transparent';
+    btn.style.color = 'var(--text-dim)';
+    btn.style.borderColor = 'var(--border)';
+    label.textContent = 'Vibration Off';
+    icon.style.opacity = '0.35';
+  }
+}
+
+function doVibrate(pattern) {
+  if (vibrationOn && navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function doIncrement(event) {
+  if (!activeId) return;
+  const item = getById(activeId);
+  if (!item) return;
+
+  item.count++;
+  save();
+  doVibrate(12);
+
+  // Ripple
+  const btn = document.getElementById('tapBtn');
+  const r = document.createElement('span');
+  r.className = 'tap-btn-ripple';
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 1.5;
+  r.style.cssText = `width:${size}px;height:${size}px;left:${(event.clientX-rect.left)-(size/2)}px;top:${(event.clientY-rect.top)-(size/2)}px`;
+  btn.appendChild(r);
+  setTimeout(() => r.remove(), 600);
+
+  // Pop animation
+  const num = document.getElementById('counterNum');
+  num.classList.add('pop');
+  setTimeout(() => num.classList.remove('pop'), 200);
+
+  updateRing(item);
+  render();
+
+  // Done notification
+  if (item.target && item.count === item.target) {
+    showToast('🎉 ' + item.title + ' complete! Alhamdulillah!');
+    doVibrate([60, 40, 100, 40, 150]);
+  }
+}
+
+function doReset() {
+  if (!activeId) return;
+  const item = getById(activeId);
+  if (!item) return;
+  if (!confirm('Reset "' + item.title + '" counter to 0?')) return;
+  item.count = 0;
+  save();
+  updateRing(item);
+  render();
+  showToast('Counter reset');
+}
+
+function quickReset(id) {
+  const item = getById(id);
+  if (!item) return;
+  if (!confirm('Reset "' + item.title + '" to 0?')) return;
+  item.count = 0;
+  save();
+  if (activeId === id) updateRing(item);
+  render();
+  showToast('Counter reset');
+}
+
+function deleteItem(id) {
+  const item = getById(id);
+  if (!item) return;
+  if (!confirm('Delete "' + item.title + '"? This cannot be undone.')) return;
+  items = items.filter(i => i.id !== id);
+  if (activeId === id) {
+    activeId = null;
+    document.getElementById('activePanel').classList.remove('visible');
+  }
+  save();
+  render();
+  showToast('Deleted');
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+
+function buildColorGrid() {
+  const grid = document.getElementById('colorGrid');
+  grid.innerHTML = COLORS.map(c => `
+    <div class="color-swatch ${c === selectedColor ? 'selected' : ''}"
+         style="background:${c};outline-color:${c}"
+         onclick="pickColor('${c}')"></div>
+  `).join('');
+}
+
+function pickColor(c) {
+  selectedColor = c;
+  buildColorGrid();
+}
+
+function openModal() {
+  editingId = null;
+  selectedColor = COLORS[0];
+  document.getElementById('modalTitle').textContent = 'Add New Tasbeeh';
+  document.getElementById('submitBtn').textContent = 'Add Tasbeeh';
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fArabic').value = '';
+  document.getElementById('fNote').value = '';
+  document.getElementById('fTarget').value = '';
+  document.getElementById('editId').value = '';
+  buildColorGrid();
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('fTitle').focus(), 350);
+}
+
+function openEditModal(id) {
+  const item = getById(id);
+  if (!item) return;
+  editingId = id;
+  selectedColor = item.color || COLORS[0];
+  document.getElementById('modalTitle').textContent = 'Edit Tasbeeh';
+  document.getElementById('submitBtn').textContent = 'Save Changes';
+  document.getElementById('fTitle').value = item.title;
+  document.getElementById('fArabic').value = item.arabic || '';
+  document.getElementById('fNote').value = item.note || '';
+  document.getElementById('fTarget').value = item.target || '';
+  document.getElementById('editId').value = id;
+  buildColorGrid();
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('fTitle').focus(), 350);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function handleSubmit() {
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) {
+    document.getElementById('fTitle').focus();
+    document.getElementById('fTitle').style.borderColor = '#ef4444';
+    setTimeout(() => document.getElementById('fTitle').style.borderColor = '', 1500);
+    return;
+  }
+  const arabic = document.getElementById('fArabic').value.trim();
+  const note = document.getElementById('fNote').value.trim();
+  const targetVal = parseInt(document.getElementById('fTarget').value);
+  const target = (!isNaN(targetVal) && targetVal > 0) ? targetVal : null;
+
+  if (editingId) {
+    const item = getById(editingId);
+    if (item) {
+      item.title = title;
+      item.arabic = arabic;
+      item.note = note;
+      item.target = target;
+      item.color = selectedColor;
+      if (activeId === editingId) updateActivePanel(item);
+    }
+    showToast('Tasbeeh updated');
+  } else {
+    items.push({ id: Date.now(), title, arabic, note, count: 0, target, color: selectedColor });
+    showToast('Tasbeeh added');
+  }
+
+  save();
+  closeModal();
+  render();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function shadeColor(hex, amt) {
+  const num = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, Math.max(0, (num >> 16) + amt));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + amt));
+  const b = Math.min(255, Math.max(0, (num & 0xff) + amt));
+  return '#' + ((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+}
+
+// Keyboard support
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space' && activeId) {
+    e.preventDefault();
+    doIncrement({ clientX: 0, clientY: 0, currentTarget: document.getElementById('tapBtn') });
+  }
+  if (e.key === 'Escape') closeModal();
+});
+
+// Init
+updateVibBtn();
+render();
+</script>
+</body>
+</html>
